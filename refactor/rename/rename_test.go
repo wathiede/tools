@@ -608,6 +608,11 @@ func f() {
 	print(y)
 	y := ""
 	print(y)
+	var z int
+	g := func() {
+		z = 1
+	}
+	g()
 }
 `),
 			from: "main.y", to: "x",
@@ -620,6 +625,10 @@ func f() {
 	print(x)
 	y := ""
 	print(y)
+	g := func() {
+		z = 1
+	}
+	g()
 }
 `,
 			},
