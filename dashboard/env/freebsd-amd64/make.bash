@@ -4,7 +4,7 @@
 # license that can be found in the LICENSE file.
 
 # Only tested on Ubuntu 14.04.
-# Requires packages: qemu, expect, and mkisofs.
+# Requires packages: qemu expect mkisofs
 
 set -e -x
 readonly VERSION=10.1
