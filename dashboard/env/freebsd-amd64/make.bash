@@ -31,7 +31,7 @@ mkdir -p iso/etc iso/usr/local/etc/rc.d
 
 cat >iso/etc/rc.conf <<EOF
 hostname="buildlet"
-ifconfig_vtnet0="SYNCDHCP"
+ifconfig_vtnet0="SYNCDHCP mtu 1460"
 sshd_enable="YES"
 buildlet_enable="YES"
 EOF
