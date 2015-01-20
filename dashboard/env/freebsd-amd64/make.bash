@@ -3,12 +3,22 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+# Builds FreeBSD image based on raw disk images provided by FreeBSD.org
+# This script boots the image once, side-loads GCE Go builder configuration via
+# an ISO mounted as the CD-ROM, and customizes the system before powering down.
+# SSH is enabled, and a user gopher, password gopher, is created.
+
 # Only tested on Ubuntu 14.04.
 # Requires packages: qemu expect mkisofs
 
 set -e -x
 readonly VERSION=10.1
 readonly IMAGE=freebsd-${VERSION:?}-amd64-gce.tar.gz
+
+if [ $(tput cols) -lt 80 ]; then
+	echo "Running qemu with curses display requires a window 80 columns or larger or expect(1) won't work correctly."
+	exit 1
+fi
 
 if ! [ -e FreeBSD-${VERSION:?}-RELEASE-amd64.raw ]; then
   curl -O ftp://ftp.freebsd.org/pub/FreeBSD/releases/VM-IMAGES/${VERSION:?}-RELEASE/amd64/Latest/FreeBSD-${VERSION:?}-RELEASE-amd64.raw.xz
@@ -19,15 +29,9 @@ cp FreeBSD-${VERSION:?}-RELEASE-amd64.raw disk.raw
 
 mkdir -p iso/etc
 
-cat >iso/install.sh <<EOF
-set -x
-find /mnt/
-cp /mnt/etc/rc.local /etc/rc.local
-cp /mnt/etc/rc.conf /etc/rc.conf
-EOF
-
 cat >iso/etc/rc.conf <<EOF
 hostname="buildlet"
+sshd_enable="YES"
 EOF
 
 cat >iso/etc/rc.local <<EOF
@@ -49,6 +53,20 @@ cat >iso/etc/rc.local <<EOF
   sleep 10
   poweroff
 )
+EOF
+
+cat >iso/install.sh <<EOF
+set -x
+
+cp /mnt/etc/rc.local /etc/rc.local
+cp /mnt/etc/rc.conf /etc/rc.conf
+adduser -f - <<ADDUSEREOF
+gopher::::::Gopher Gopherson::/bin/sh:gopher                                        
+ADDUSEREOF
+
+# Enable serial console early in boot process.
+echo '-h' > /boot.conf
+echo 'console="comconsole"' >> /boot/loader.conf
 EOF
 
 mkisofs -r -o config.iso iso/
@@ -75,6 +93,10 @@ send "dhclient vtnet0\n"
 
 expect "root@:~ # "
 sleep 1
+send "mount_cd9660 /dev/cd0 /mnt\nsh /mnt/install.sh\n"
+
+expect "root@:~ # "
+sleep 1
 send "pkg install bash curl git\n"
 
 expect "Do you want to fetch and install it now"
@@ -84,14 +106,6 @@ send "y\n"
 expect "Proceed with this action"
 sleep 1
 send "y\n"
-
-expect "root@:~ # "
-sleep 1
-send "mount -urw /\n"
-
-expect "root@:~ # "
-sleep 1
-send "mount_cd9660 /dev/cd0 /mnt\nsh /mnt/install.sh\n"
 
 expect "root@:~ # "
 sleep 1
