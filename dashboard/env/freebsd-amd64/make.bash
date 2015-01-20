@@ -27,38 +27,51 @@ fi
 
 cp FreeBSD-${VERSION:?}-RELEASE-amd64.raw disk.raw
 
-mkdir -p iso/etc
+mkdir -p iso/etc iso/usr/local/etc/rc.d
 
 cat >iso/etc/rc.conf <<EOF
 hostname="buildlet"
+ifconfig_vtnet0="SYNCDHCP"
 sshd_enable="YES"
+buildlet_enable="YES"
 EOF
 
-cat >iso/etc/rc.local <<EOF
-(
+cat >iso/usr/local/etc/rc.d/buildlet <<EOF
   set -x
-  PATH=/bin:/usr/bin:/usr/local/bin
-  echo "starting buildlet script"
-  netstat -rn
-  cat /etc/resolv.conf
-  dig metadata.google.internal
-  (
-    set -e
-    export PATH="\$PATH:/usr/local/bin"
-    /usr/local/bin/curl -o /buildlet \$(/usr/local/bin/curl -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/attributes/buildlet-binary-url)
-    chmod +x /buildlet
-    exec /buildlet
-  )
-  echo "giving up"
-  sleep 10
-  poweroff
-)
+#!/bin/sh
+
+# PROVIDE: buildlet
+# REQUIRE: LOGIN cron
+# BEFORE: securelevel
+
+name=buildlet
+rcvar=${name}_enable
+
+function rcbuildlet() {
+	PATH=/bin:/usr/bin:/usr/local/bin; export PATH
+	echo "starting buildlet script"
+	netstat -rn
+	cat /etc/resolv.conf
+	BIND replaced by unbound on FreeBSD 10, so drill(1) is the new dig(1)
+	drill metadata.google.internal
+	(
+	 set -e
+	 export PATH="\$PATH:/usr/local/bin"
+	 /usr/local/bin/curl -o /buildlet \$(/usr/local/bin/curl -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/attributes/buildlet-binary-url)
+	 chmod +x /buildlet
+	 exec /buildlet
+	 echo "giving up"
+	 sleep 10
+	)
+	#poweroff
+}
+start_cmd=rc_buildlet
 EOF
 
 cat >iso/install.sh <<EOF
 set -x
 
-cp /mnt/etc/rc.local /etc/rc.local
+cp /mnt/usr/local/etc/rc.d/buildlet /usr/local/etc/rc.d/buildlet
 cp /mnt/etc/rc.conf /etc/rc.conf
 adduser -f - <<ADDUSEREOF
 gopher::::::Gopher Gopherson::/bin/sh:gopher                                        
