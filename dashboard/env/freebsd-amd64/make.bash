@@ -66,7 +66,7 @@ buildlet_start()
 	 echo "giving up"
 	 sleep 10
 	)
-	#poweroff
+	poweroff
 }
 load_rc_config \$name
 run_rc_command "\$1"
