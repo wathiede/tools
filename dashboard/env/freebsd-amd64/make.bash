@@ -37,22 +37,25 @@ buildlet_enable="YES"
 EOF
 
 cat >iso/usr/local/etc/rc.d/buildlet <<EOF
-  set -x
 #!/bin/sh
 
 # PROVIDE: buildlet
-# REQUIRE: LOGIN cron
+# REQUIRE: sshd
 # BEFORE: securelevel
 
-name=buildlet
-rcvar=${name}_enable
+. /etc/rc.subr
 
-function rcbuildlet() {
+name="buildlet"
+start_cmd="\${name}_start"
+stop_cmd=""
+
+buildlet_start()
+{
 	PATH=/bin:/usr/bin:/usr/local/bin; export PATH
 	echo "starting buildlet script"
 	netstat -rn
 	cat /etc/resolv.conf
-	BIND replaced by unbound on FreeBSD 10, so drill(1) is the new dig(1)
+	# BIND replaced by unbound on FreeBSD 10, so drill(1) is the new dig(1)
 	drill metadata.google.internal
 	(
 	 set -e
@@ -65,7 +68,8 @@ function rcbuildlet() {
 	)
 	#poweroff
 }
-start_cmd=rc_buildlet
+load_rc_config \$name
+run_rc_command "\$1"
 EOF
 
 cat >iso/install.sh <<EOF
@@ -73,10 +77,12 @@ set -x
 
 mkdir -p /usr/local/etc/rc.d/
 cp /mnt/usr/local/etc/rc.d/buildlet /usr/local/etc/rc.d/buildlet
+chmod +x /usr/local/etc/rc.d/buildlet
 cp /mnt/etc/rc.conf /etc/rc.conf
 adduser -f - <<ADDUSEREOF
 gopher::::::Gopher Gopherson::/bin/sh:gopher                                        
 ADDUSEREOF
+pw user mod gopher -G wheel
 
 # Enable serial console early in boot process.
 echo '-h' > /boot.conf
@@ -125,6 +131,7 @@ expect "root@:~ # "
 sleep 1
 send "poweroff\n"
 expect "All buffers synced."
+sleep 5
 EOF
 
 # Create Compute Engine disk image.
