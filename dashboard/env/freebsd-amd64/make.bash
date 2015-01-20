@@ -71,6 +71,7 @@ EOF
 cat >iso/install.sh <<EOF
 set -x
 
+mkdir -p /usr/local/etc/rc.d/
 cp /mnt/usr/local/etc/rc.d/buildlet /usr/local/etc/rc.d/buildlet
 cp /mnt/etc/rc.conf /etc/rc.conf
 adduser -f - <<ADDUSEREOF
