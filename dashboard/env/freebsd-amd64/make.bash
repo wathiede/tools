@@ -80,7 +80,7 @@ cp /mnt/usr/local/etc/rc.d/buildlet /usr/local/etc/rc.d/buildlet
 chmod +x /usr/local/etc/rc.d/buildlet
 cp /mnt/etc/rc.conf /etc/rc.conf
 adduser -f - <<ADDUSEREOF
-gopher::::::Gopher Gopherson::/bin/sh:gopher                                        
+gopher::::::Gopher Gopherson::/bin/sh:gopher
 ADDUSEREOF
 pw user mod gopher -G wheel
 
